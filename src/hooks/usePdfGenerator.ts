@@ -22,7 +22,7 @@ export const usePdfGenerator = ({
 
     const opt = {
       margin: 1,
-      filename: `patel-electric-${customerName || "invoice"}.pdf`,
+      filename: `patel-electric-${customerName || "pricing"}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2 },
       jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
