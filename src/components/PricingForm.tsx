@@ -2,11 +2,41 @@ import React, { useState, useEffect } from "react";
 import type { FieldType } from "../data/field";
 import { priceFields, wiredDetails } from "../data/field";
 import { billHtml } from "../data/bill";
-import { FaShare, FaDownload, FaPlus, FaTrash, FaRobot, FaTimes } from "react-icons/fa";
+import { FaShare, FaDownload, FaPlus, FaTrash, FaRobot, FaTimes, FaMicrophone, FaMicrophoneSlash } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 import { sendMessage } from "../services/gemini";
 import html2pdf from 'html2pdf.js';
 import { v4 as uuidv4 } from 'uuid';
+
+// Add Web Speech API types
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+  interpretation: Record<string, unknown>;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
+  onend: () => void;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+}
+
+declare global {
+  interface Window {
+    webkitSpeechRecognition: new () => SpeechRecognition;
+  }
+}
 
 const initialCustomer = {
   name: "",
@@ -20,6 +50,34 @@ interface EditPricingState {
   priceValues: FieldType[];
   id: string;
   timestamp: number;
+}
+
+// Add animation keyframes
+const pulseAnimation = `
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes wave {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes ripple {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+`;
+
+// Add animation to document
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = pulseAnimation;
+  document.head.appendChild(style);
 }
 
 const PricingForm = () => {
@@ -37,6 +95,8 @@ const PricingForm = () => {
   const [newFieldType, setNewFieldType] = useState<'wire' | 'price' | null>(null);
   const [newFieldLabel, setNewFieldLabel] = useState('');
   const [newFieldValue, setNewFieldValue] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [speechRecognition, setSpeechRecognition] = useState<SpeechRecognition | null>(null);
 
   // Helper to determine if a field is custom (not part of initial fields)
   const isCustomField = (id: number, isWireField: boolean) => {
@@ -55,6 +115,36 @@ const PricingForm = () => {
       setEditId(id);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    // Initialize speech recognition
+    if ('webkitSpeechRecognition' in window) {
+      const recognition = new window.webkitSpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'gu-IN'; // Gujarati language
+
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const transcript = Array.from(event.results)
+          .map((result) => result[0])
+          .map((result) => result.transcript)
+          .join('');
+        
+        setAiPrompt(transcript);
+      };
+
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      setSpeechRecognition(recognition);
+    }
+  }, []);
 
   const handleCustomerChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -89,6 +179,12 @@ const PricingForm = () => {
 
   const handleAiFill = async () => {
     if (!aiPrompt.trim()) return;
+    
+    // Stop microphone if active
+    if (isListening && speechRecognition) {
+      speechRecognition.stop();
+      setIsListening(false);
+    }
     
     setIsAiLoading(true);
     try {
@@ -239,6 +335,34 @@ const PricingForm = () => {
     setNewFieldValue('');
   };
 
+  const toggleListening = () => {
+    if (!speechRecognition) {
+      alert('Speech recognition is not supported in your browser.');
+      return;
+    }
+
+    if (isListening) {
+      speechRecognition.stop();
+    } else {
+      // Clear previous input when starting new recording
+      setAiPrompt("");
+      speechRecognition.start();
+    }
+    setIsListening(!isListening);
+  };
+
+  const resetAiDialog = () => {
+    // Stop microphone if active
+    if (isListening && speechRecognition) {
+      speechRecognition.stop();
+      setIsListening(false);
+    }
+    
+    setShowAiDialog(false);
+    setAiPrompt("");
+    setAiPreview(null);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-4 px-1 md:py-8 md:px-2 overflow-auto pb-24">
       {/* Add Field Dialog */}
@@ -332,23 +456,67 @@ const PricingForm = () => {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold text-gray-900">AI Price Suggestions</h3>
                 <button
-                  onClick={() => setShowAiDialog(false)}
+                  onClick={resetAiDialog}
                   className="text-gray-500 hover:text-gray-700"
                 >
                   <FaTimes size={20} />
                 </button>
               </div>
-              
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Available Fields
+                </label>
+                <div className="grid grid-cols-2 gap-2 max-h-[150px] overflow-y-auto p-2 bg-gray-50 rounded-lg">
+                  {priceValues.map((field) => (
+                    <div key={field.id} className="text-sm text-gray-600">
+                      • {field.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Describe your requirements
                 </label>
-                <textarea
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="Example:આ દરજીખાતા મુજબ વિવિધ ઈલેક્ટ્રિકલ કામોની ચાર્જવિહી આપવામાં આવી છે. લાઈટિંગ પોઈન્ટ માટે ભાવ રૂ. 10 છે. મેઈન અને એ.સી. લાઈન (1.5mm) માટે રૂ. 20 નો ખર્ચ આવે છે, જયારે તેનું જ 2.5mm વેરિયન્ટ માટે ભાવ રૂ. 30 છે. ઉપરાંત, પેનલ લાઈટ તથા ફેસી લાઈટ ફિટિંગ ચાર્જ માટે રૂ. 40 નક્કી કરવામાં આવ્યા છે. આ ભાવો વિવિધ ઇલેક્ટ્રિકલ ફિટિંગ્સ અને લાઈટિંગ પોઈન્ટ્સના આધારે ગ્રાહકોને સરળતાથી અંદાજ આપવામાં માટે દર્શાવવામાં આવ્યા છે."
-                  className="w-full rounded-lg px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-400 shadow-sm transition min-h-[100px]"
-                />
+                <div className="relative">
+                  <textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder="Example:આ દરજીખાતા મુજબ વિવિધ ઈલેક્ટ્રિકલ કામોની ચાર્જવિહી આપવામાં આવી છે. લાઈટિંગ પોઈન્ટ માટે ભાવ રૂ. 10 છે. મેઈન અને એ.સી. લાઈન (1.5mm) માટે રૂ. 20 નો ખર્ચ આવે છે, જયારે તેનું જ 2.5mm વેરિયન્ટ માટે ભાવ રૂ. 30 છે. ઉપરાંત, પેનલ લાઈટ તથા ફેસી લાઈટ ફિટિંગ ચાર્જ માટે રૂ. 40 નક્કી કરવામાં આવ્યા છે. આ ભાવો વિવિધ ઇલેક્ટ્રિકલ ફિટિંગ્સ અને લાઈટિંગ પોઈન્ટ્સના આધારે ગ્રાહકોને સરળતાથી અંદાજ આપવામાં માટે દર્શાવવામાં આવ્યા છે."
+                    className="w-full rounded-lg px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-400 shadow-sm transition min-h-[100px] pr-12"
+                  />
+                  <button
+                    onClick={toggleListening}
+                    className={`absolute right-3 top-3 p-2 rounded-full transition ${
+                      isListening 
+                        ? 'bg-red-500 hover:bg-red-600 text-white' 
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                    }`}
+                    style={isListening ? {
+                      animation: 'pulse 1.5s infinite, ripple 2s infinite'
+                    } : undefined}
+                    title={isListening ? 'Stop listening' : 'Start voice input'}
+                  >
+                    <div className="relative">
+                      {isListening ? <FaMicrophoneSlash size={16} /> : <FaMicrophone size={16} />}
+                      {isListening && (
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                      )}
+                    </div>
+                  </button>
+                </div>
+                {isListening && (
+                  <div className="mt-2 text-sm text-red-500 flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <span className="w-1 h-3 bg-red-500 rounded-full animate-wave" style={{ animation: 'wave 1s infinite' }} />
+                      <span className="w-1 h-3 bg-red-500 rounded-full animate-wave" style={{ animation: 'wave 1s infinite 0.2s' }} />
+                      <span className="w-1 h-3 bg-red-500 rounded-full animate-wave" style={{ animation: 'wave 1s infinite 0.4s' }} />
+                    </div>
+                    Listening...
+                  </div>
+                )}
               </div>
 
               <button
@@ -362,7 +530,7 @@ const PricingForm = () => {
 
               {aiPreview && (
                 <div className="mt-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">Preview</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">Generated Suggestions</h4>
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
                     {aiPreview.map((field) => (
                       <div key={field.id} className="bg-gray-50 rounded-lg p-3">
