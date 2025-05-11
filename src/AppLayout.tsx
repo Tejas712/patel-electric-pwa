@@ -3,7 +3,7 @@ import PricingList from "./components/PricingList";
 import GeminiChat from "./components/GeminiChat";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import logo from "./assets/logo.png";
-import { FaHome, FaList, FaRobot } from "react-icons/fa";
+import { FaHome, FaList } from "react-icons/fa";
 
 function MobileNav() {
   const location = useLocation();
