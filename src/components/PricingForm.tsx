@@ -4,8 +4,9 @@ import { priceFields, wiredDetails } from "../data/field";
 import { billHtml } from "../data/bill";
 import { FaShare, FaDownload, FaPlus, FaTrash, FaRobot, FaTimes } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
-import { v4 as uuidv4 } from "uuid";
 import { sendMessage } from "../services/gemini";
+import html2pdf from 'html2pdf.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const initialCustomer = {
   name: "",
@@ -32,6 +33,16 @@ const PricingForm = () => {
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiPreview, setAiPreview] = useState<FieldType[] | null>(null);
+  const [showAddFieldDialog, setShowAddFieldDialog] = useState(false);
+  const [newFieldType, setNewFieldType] = useState<'wire' | 'price' | null>(null);
+  const [newFieldLabel, setNewFieldLabel] = useState('');
+  const [newFieldValue, setNewFieldValue] = useState('');
+
+  // Helper to determine if a field is custom (not part of initial fields)
+  const isCustomField = (id: number, isWireField: boolean) => {
+    if (isWireField) return id > wiredDetails.length;
+    return id > priceFields.length;
+  };
 
   // Load editPricing if present
   useEffect(() => {
@@ -68,88 +79,108 @@ const PricingForm = () => {
     });
   };
 
-  const addNewWireField = () => {
-    const newField: FieldType = {
-      id: wiresValues.length + 1,
-      label: "નવું ફીલ્ડ",
-      value: "",
-    };
-    setWiresValues([...wiresValues, newField]);
-  };
-
-  const addNewPriceField = () => {
-    const newField: FieldType = {
-      id: priceValues.length + 1,
-      label: "નવું ફીલ્ડ",
-      value: 0,
-    };
-    setPriceValues([...priceValues, newField]);
-  };
-
-  const removeField = (id: number, isWireField: boolean) => {
-    if (isWireField) {
-      setWiresValues((prevState) =>
-        prevState.filter((field) => field.id !== id)
-      );
+  const handleDeleteField = (field: FieldType, type: 'wire' | 'price') => {
+    if (type === 'wire') {
+      setWiresValues(wiresValues.filter((w) => w.id !== field.id));
     } else {
-      setPriceValues((prevState) =>
-        prevState.filter((field) => field.id !== id)
-      );
+      setPriceValues(priceValues.filter((p) => p.id !== field.id));
     }
   };
 
-  const generatePDFContent = () => {
-    const htmlContent = billHtml({
+  const handleAiFill = async () => {
+    if (!aiPrompt.trim()) return;
+    
+    setIsAiLoading(true);
+    try {
+      const response = await sendMessage(priceValues, aiPrompt);
+      
+      if (response.fields) {
+        setAiPreview(response.fields);
+      }
+    } catch (error) {
+      console.error('Error getting AI suggestions:', error);
+      alert('Failed to get AI suggestions. Please try again.');
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const applyAiSuggestions = () => {
+    if (!aiPreview) return;
+
+    const updatedPriceFields = priceValues.map(field => {
+      const aiField = aiPreview.find(f => f.label === field.label);
+      if (aiField) {
+        return {
+          ...field,
+          value: aiField.value || 0
+        };
+      }
+      return field;
+    });
+    setPriceValues(updatedPriceFields);
+    setShowAiDialog(false);
+    setAiPrompt("");
+    setAiPreview(null);
+  };
+
+  const handleDownloadPDF = () => {
+    const element = document.createElement('div');
+    element.innerHTML = billHtml({
       priceFields: priceValues,
       wireFields: wiresValues,
     });
-    return new Blob([htmlContent], { type: "text/html" });
+
+    const opt = {
+      margin: 1,
+      filename: `patel-electric-${customer.name || 'invoice'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
   };
 
-  const downloadPDF = async () => {
+  const handleShare = async () => {
     try {
-      const blob = generatePDFContent();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "patel-electric-bill.html";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error downloading PDF:", error);
-      alert(error instanceof Error ? error.message : "An error occurred");
-    }
-  };
+      const element = document.createElement('div');
+      element.innerHTML = billHtml({
+        priceFields: priceValues,
+        wireFields: wiresValues,
+      });
 
-  const sharePDF = async () => {
-    try {
-      const blob = generatePDFContent();
-      const file = new File([blob], "patel-electric-bill.html", {
-        type: "text/html",
+      const opt = {
+        margin: 1,
+        filename: `patel-electric-${customer.name || 'invoice'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      // Generate PDF blob
+      const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+      
+      // Create a File object from the blob
+      const file = new File([pdfBlob], `patel-electric-${customer.name || 'invoice'}.pdf`, {
+        type: 'application/pdf'
       });
 
       if (navigator.share) {
         await navigator.share({
           files: [file],
-          title: "Patel Electric Bill",
-          text: "Check out this bill from Patel Electric",
+          title: 'Patel Electric Invoice',
+          text: `Invoice for ${customer.name || 'Customer'}`,
         });
       } else {
-        const url = URL.createObjectURL(blob);
-        window.open(url, "_blank");
+        // Fallback for browsers that don't support Web Share API
+        const url = URL.createObjectURL(pdfBlob);
+        window.open(url, '_blank');
       }
     } catch (error) {
-      console.error("Error sharing PDF:", error);
-      alert(error instanceof Error ? error.message : "An error occurred");
+      console.error('Error sharing PDF:', error);
+      alert('Failed to share PDF. Please try downloading instead.');
     }
-  };
-
-  // Helper to determine if a field is custom (not part of initial fields)
-  const isCustomField = (id: number, isWireField: boolean) => {
-    if (isWireField) return id > wiredDetails.length;
-    return id > priceFields.length;
   };
 
   // Save or update pricing to localStorage
@@ -186,46 +217,113 @@ const PricingForm = () => {
     navigate("/list");
   };
 
-  const handleAiFill = async () => {
-    if (!aiPrompt.trim()) return;
-    
-    setIsAiLoading(true);
-    try {
-      const response = await sendMessage(priceValues, aiPrompt);
-        console.log("check ====>", response);
-      if (response.fields) {
-        setAiPreview(response.fields);
-      }
-    } catch (error) {
-      console.error('Error getting AI suggestions:', error);
-      alert('Failed to get AI suggestions. Please try again.');
-    } finally {
-      setIsAiLoading(false);
+  const handleAddField = () => {
+    if (!newFieldType || !newFieldLabel.trim()) return;
+
+    const newField: FieldType = {
+      id: newFieldType === 'wire' ? wiresValues.length + 1 : priceValues.length + 1,
+      label: newFieldLabel,
+      value: newFieldType === 'wire' ? newFieldValue : Number(newFieldValue) || 0,
+    };
+
+    if (newFieldType === 'wire') {
+      setWiresValues([...wiresValues, newField]);
+    } else {
+      setPriceValues([...priceValues, newField]);
     }
-  };
 
-  const applyAiSuggestions = () => {
-    if (!aiPreview) return;
-
-    // Update price fields with AI response
-    const updatedPriceFields = priceValues.map(field => {
-      const aiField = aiPreview.find(f => f.label === field.label);
-      if (aiField) {
-        return {
-          ...field,
-          value: aiField.value || 0
-        };
-      }
-      return field;
-    });
-    setPriceValues(updatedPriceFields);
-    setShowAiDialog(false);
-    setAiPrompt("");
-    setAiPreview(null);
+    // Reset dialog state
+    setShowAddFieldDialog(false);
+    setNewFieldType(null);
+    setNewFieldLabel('');
+    setNewFieldValue('');
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-4 px-1 md:py-8 md:px-2 overflow-auto pb-24">
+      {/* Add Field Dialog */}
+      {showAddFieldDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Add New Field</h3>
+                <button
+                  onClick={() => setShowAddFieldDialog(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <FaTimes size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Field Type
+                  </label>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setNewFieldType('wire')}
+                      className={`flex-1 px-4 py-2 rounded-lg border ${
+                        newFieldType === 'wire'
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Wire Field
+                    </button>
+                    <button
+                      onClick={() => setNewFieldType('price')}
+                      className={`flex-1 px-4 py-2 rounded-lg border ${
+                        newFieldType === 'price'
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Price Field
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Field Label
+                  </label>
+                  <input
+                    type="text"
+                    value={newFieldLabel}
+                    onChange={(e) => setNewFieldLabel(e.target.value)}
+                    placeholder="Enter field label"
+                    className="w-full rounded-lg px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-sm transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Initial Value
+                  </label>
+                  <input
+                    type={newFieldType === 'price' ? 'number' : 'text'}
+                    value={newFieldValue}
+                    onChange={(e) => setNewFieldValue(e.target.value)}
+                    placeholder={newFieldType === 'price' ? 'Enter number' : 'Enter text'}
+                    className="w-full rounded-lg px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-sm transition"
+                  />
+                </div>
+
+                <button
+                  onClick={handleAddField}
+                  disabled={!newFieldType || !newFieldLabel.trim()}
+                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow text-sm transition disabled:opacity-50"
+                >
+                  Add Field
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AI Dialog */}
       {showAiDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -292,7 +390,7 @@ const PricingForm = () => {
         {/* Customer Details */}
         <div className="mb-10">
           <h2 className="text-3xl font-extrabold text-gray-900 mb-6 text-center tracking-tight drop-shadow-lg">Customer Details</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-6 justify-center">
             <input
               type="text"
               name="name"
@@ -301,7 +399,7 @@ const PricingForm = () => {
               onChange={handleCustomerChange}
               className="rounded-lg px-5 py-3 bg-gray-100 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 shadow-sm transition"
             />
-            <input
+            {/* <input
               type="text"
               name="phone"
               placeholder="Phone Number"
@@ -316,7 +414,7 @@ const PricingForm = () => {
               value={customer.address}
               onChange={handleCustomerChange}
               className="rounded-lg px-5 py-3 bg-gray-100 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 shadow-sm transition"
-            />
+            /> */}
           </div>
         </div>
 
@@ -346,14 +444,18 @@ const PricingForm = () => {
                   {field.unit && <span className="text-xs text-gray-500 ml-2">{field.unit}</span>}
                 </div>
                 {isCustomField(field.id, true) && (
-                  <button className="ml-2 bg-red-500 hover:bg-red-700 text-white rounded-lg p-2 transition self-end mt-1" title="Remove" onClick={() => removeField(field.id, true)}>
-                    <FaTrash size={14} />
-                  </button>
+                  <button className="ml-2 bg-red-500 hover:bg-red-700 text-white rounded-lg p-2 transition self-end mt-1" title="Remove" onClick={() => handleDeleteField(field, 'wire')}><FaTrash size={14} /></button>
                 )}
               </div>
             ))}
           </div>
-          <button className="mt-4 flex items-center gap-2 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium shadow text-sm transition" onClick={addNewWireField}>
+          <button
+            onClick={() => {
+              setNewFieldType('wire');
+              setShowAddFieldDialog(true);
+            }}
+            className=" mt-3 flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium shadow text-sm transition"
+          >
             <FaPlus size={14} />
             <span>ફીલ્ડ ઉમેરો</span>
           </button>
@@ -373,31 +475,46 @@ const PricingForm = () => {
                   value={String(priceValues[field.id - 1].value)}
                 />
                 {isCustomField(field.id, false) && (
-                  <button className="ml-2 bg-red-500 hover:bg-red-700 text-white rounded-lg p-2 transition self-end mt-1" title="Remove" onClick={() => removeField(field.id, false)}>
-                    <FaTrash size={14} />
-                  </button>
+                  <button className="ml-2 bg-red-500 hover:bg-red-700 text-white rounded-lg p-2 transition self-end mt-1" title="Remove" onClick={() => handleDeleteField(field, 'price')}><FaTrash size={14} /></button>
                 )}
               </div>
             ))}
           </div>
-          <button className="mt-4 flex items-center gap-2 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium shadow text-sm transition" onClick={addNewPriceField}>
+          <button
+            onClick={() => {
+              setNewFieldType('price');
+              setShowAddFieldDialog(true);
+            }}
+            className="flex mt-3 items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium shadow text-sm transition"
+          >
             <FaPlus size={14} />
             <span>ફીલ્ડ ઉમેરો</span>
           </button>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col md:flex-row justify-end gap-2 md:gap-3 mt-8 w-full">
-          <button className="flex items-center justify-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium shadow text-sm transition w-full md:w-auto focus:outline-none focus:ring-2 focus:ring-yellow-400" onClick={downloadPDF} aria-label="Download">
-            <FaDownload size={16} className="md:size-5" />
-            <span>Download</span>
+        <div className="flex justify-end gap-4 mt-8">
+          <button
+            onClick={handleDownloadPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium shadow text-sm transition"
+          >
+            <FaDownload />
+            Download PDF
           </button>
-          <button className="flex items-center justify-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-yellow-700 hover:bg-yellow-800 text-white rounded-lg font-medium shadow text-sm transition w-full md:w-auto focus:outline-none focus:ring-2 focus:ring-yellow-400" onClick={sharePDF} aria-label="Share">
-            <FaShare size={16} className="md:size-5" />
-            <span>Share</span>
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow text-sm transition"
+          >
+            <FaShare />
+            Share PDF
           </button>
-          <button className={`flex items-center justify-center gap-2 px-3 py-1.5 md:px-4 md:py-2 ${editId ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-lg font-medium shadow text-sm transition w-full md:w-auto focus:outline-none focus:ring-2 focus:ring-blue-400`} onClick={handleSaveOrUpdate} aria-label={editId ? 'Update' : 'Save'}>
-            <span>{editId ? 'Update' : 'Save'}</span>
+          <button
+            onClick={handleSaveOrUpdate}
+            className={`flex items-center gap-2 px-4 py-2 ${
+              editId ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-600 hover:bg-blue-700'
+            } text-white rounded-lg font-medium shadow text-sm transition`}
+          >
+            {editId ? 'Update' : 'Save'}
           </button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import PricingForm from "./components/PricingForm";
 import PricingList from "./components/PricingList";
 import GeminiChat from "./components/GeminiChat";
-import { Routes, Route, Link, useLocation } from "react-router-dom";
+import { Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
 import logo from "./assets/logo.png";
 import { FaHome, FaList } from "react-icons/fa";
 
@@ -81,6 +81,7 @@ function AppLayout() {
           <Route path="/" element={<PricingForm />} />
           <Route path="/list" element={<PricingList />} />
           <Route path="/chat" element={<GeminiChat />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <MobileNav />
       </div>
