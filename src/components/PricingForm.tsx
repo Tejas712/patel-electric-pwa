@@ -182,11 +182,11 @@ const PricingForm = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-4 px-1 md:py-8 md:px-2 overflow-auto">
-      <div className="w-full max-w-3xl bg-white/90 rounded-2xl md:rounded-3xl shadow-2xl p-3 sm:p-4 md:p-8 md:py-12">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-4 px-1 md:py-8 md:px-2 overflow-auto pb-24">
+      <div className="w-full max-w-3xl bg-white/50 backdrop-blur-lg border border-white/30 rounded-2xl md:rounded-3xl shadow-2xl p-3 sm:p-4 md:p-8 md:py-12">
         {/* Customer Details */}
         <div className="mb-10">
-          <h2 className="text-3xl font-extrabold text-gray-800 mb-6 text-center tracking-tight drop-shadow">Customer Details</h2>
+          <h2 className="text-3xl font-extrabold text-gray-900 mb-6 text-center tracking-tight drop-shadow-lg">Customer Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <input
               type="text"
@@ -217,7 +217,7 @@ const PricingForm = () => {
 
         {/* Wire Details */}
         <div className="mb-10">
-          <h2 className="text-2xl font-bold text-green-700 mb-5 text-center tracking-tight">વાયર ડીટેલ્સ</h2>
+          <h2 className="text-2xl font-extrabold text-gray-900 mb-5 text-center tracking-tight drop-shadow-lg">વાયર ડીટેલ્સ</h2>
           <div className="space-y-3">
             {wiresValues.map((field) => (
               <div key={field.id} className="bg-gray-100 rounded-lg p-3 flex flex-col gap-1">
@@ -239,15 +239,15 @@ const PricingForm = () => {
               </div>
             ))}
           </div>
-          <button className="mt-4 flex items-center gap-2 px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow transition" onClick={addNewWireField}>
-            <FaPlus size={16} />
+          <button className="mt-4 flex items-center gap-2 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium shadow text-sm transition" onClick={addNewWireField}>
+            <FaPlus size={14} />
             <span>ફીલ્ડ ઉમેરો</span>
           </button>
         </div>
 
         {/* Price Fields */}
         <div className="mb-10">
-          <h2 className="text-2xl font-bold text-green-700 mb-5 text-center tracking-tight">પ્રાઇસ ફીલ્ડ્સ</h2>
+          <h2 className="text-2xl font-extrabold text-gray-900 mb-5 text-center tracking-tight drop-shadow-lg">પ્રાઇસ ફીલ્ડ્સ</h2>
           <div className="space-y-3">
             {priceValues.map((field) => (
               <div key={field.id} className="bg-gray-100 rounded-lg p-3 flex flex-col gap-1">
@@ -266,23 +266,23 @@ const PricingForm = () => {
               </div>
             ))}
           </div>
-          <button className="mt-4 flex items-center gap-2 px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow transition" onClick={addNewPriceField}>
-            <FaPlus size={16} />
+          <button className="mt-4 flex items-center gap-2 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium shadow text-sm transition" onClick={addNewPriceField}>
+            <FaPlus size={14} />
             <span>ફીલ્ડ ઉમેરો</span>
           </button>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col md:flex-row justify-end gap-3 md:gap-4 mt-8">
-          <button className="flex items-center gap-2 px-4 py-3 md:px-8 md:py-3 bg-green-600 hover:bg-green-700 text-white rounded-full font-bold shadow-lg text-base md:text-lg transition w-full md:w-auto" onClick={downloadPDF}>
-            <FaDownload size={20} className="md:size-6" />
+        <div className="flex flex-col md:flex-row justify-end gap-2 md:gap-3 mt-8 w-full">
+          <button className="flex items-center justify-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium shadow text-sm transition w-full md:w-auto focus:outline-none focus:ring-2 focus:ring-yellow-400" onClick={downloadPDF} aria-label="Download">
+            <FaDownload size={16} className="md:size-5" />
             <span>Download</span>
           </button>
-          <button className="flex items-center gap-2 px-4 py-3 md:px-8 md:py-3 bg-yellow-700 hover:bg-yellow-800 text-white rounded-full font-bold shadow-lg text-base md:text-lg transition w-full md:w-auto" onClick={sharePDF}>
-            <FaShare size={20} className="md:size-6" />
+          <button className="flex items-center justify-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-yellow-700 hover:bg-yellow-800 text-white rounded-lg font-medium shadow text-sm transition w-full md:w-auto focus:outline-none focus:ring-2 focus:ring-yellow-400" onClick={sharePDF} aria-label="Share">
+            <FaShare size={16} className="md:size-5" />
             <span>Share</span>
           </button>
-          <button className={`flex items-center gap-2 px-4 py-3 md:px-8 md:py-3 ${editId ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-full font-bold shadow-lg text-base md:text-lg transition w-full md:w-auto`} onClick={handleSaveOrUpdate}>
+          <button className={`flex items-center justify-center gap-2 px-3 py-1.5 md:px-4 md:py-2 ${editId ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-lg font-medium shadow text-sm transition w-full md:w-auto focus:outline-none focus:ring-2 focus:ring-blue-400`} onClick={handleSaveOrUpdate} aria-label={editId ? 'Update' : 'Save'}>
             <span>{editId ? 'Update' : 'Save'}</span>
           </button>
         </div>

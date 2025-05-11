@@ -91,9 +91,9 @@ const PricingList = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-4 px-1 md:py-8 md:px-2 overflow-auto">
-      <div className="w-full max-w-3xl bg-white/90 rounded-2xl md:rounded-3xl shadow-2xl p-3 sm:p-4 md:p-8 md:py-12">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-800 mb-6 sm:mb-8 tracking-tight drop-shadow text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-4 px-1 md:py-8 md:px-2 overflow-auto pb-24">
+      <div className="w-full max-w-3xl bg-white/50 backdrop-blur-lg border border-white/30 rounded-2xl md:rounded-3xl shadow-2xl p-3 sm:p-4 md:p-8 md:py-12">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-6 sm:mb-8 tracking-tight drop-shadow-lg text-center">
           Saved Pricing Lists
         </h2>
         {pricing.length === 0 ? (
@@ -117,28 +117,32 @@ const PricingList = () => {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-2 md:mt-0 w-full md:w-auto">
                   <button
-                    className="flex items-center justify-center gap-1 px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow transition text-sm sm:text-base w-full sm:w-auto"
+                    className="flex items-center justify-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow text-sm transition w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-blue-400"
                     onClick={() => handleEdit(pricing)}
+                    aria-label="Edit"
                   >
-                    <FaEdit /> Edit
+                    <FaEdit size={14} /> Edit
                   </button>
                   <button
-                    className="flex items-center justify-center gap-1 px-3 py-2 sm:px-4 sm:py-2 bg-yellow-700 hover:bg-yellow-800 text-white rounded-lg font-semibold shadow transition text-sm sm:text-base w-full sm:w-auto"
+                    className="flex items-center justify-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium shadow text-sm transition w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     onClick={() => handleShare(pricing)}
+                    aria-label="Share"
                   >
-                    <FaShare /> Share
+                    <FaShare size={14} /> Share
                   </button>
                   <button
-                    className="flex items-center justify-center gap-1 px-3 py-2 sm:px-4 sm:py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow transition text-sm sm:text-base w-full sm:w-auto"
+                    className="flex items-center justify-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-yellow-700 hover:bg-yellow-800 text-white rounded-lg font-medium shadow text-sm transition w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     onClick={() => handleCopy(pricing)}
+                    aria-label="Copy"
                   >
-                    <FaCopy /> Copy
+                    <FaCopy size={14} /> Copy
                   </button>
                   <button
-                    className="flex items-center justify-center gap-1 px-3 py-2 sm:px-4 sm:py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold shadow transition text-sm sm:text-base w-full sm:w-auto"
+                    className="flex items-center justify-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium shadow text-sm transition w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-red-400"
                     onClick={() => handleDelete(pricing.id)}
+                    aria-label="Delete"
                   >
-                    <FaTrash /> Delete
+                    <FaTrash size={14} /> Delete
                   </button>
                 </div>
               </div>
@@ -150,11 +154,11 @@ const PricingList = () => {
       {/* Floating Action Button for mobile */}
       {location.pathname === "/list" && (
         <button
-          className="fixed bottom-16 right-4 z-50 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg p-4 md:hidden flex items-center justify-center transition"
+          className="fixed bottom-16 right-4 z-50 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full shadow p-2 md:hidden flex items-center justify-center transition"
           onClick={() => navigate("/")}
           title="Add New Pricing"
         >
-          <FaPlus size={24} />
+          <FaPlus size={18} />
         </button>
       )}
     </div>
