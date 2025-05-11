@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList;
@@ -72,7 +73,7 @@ export const useSpeechRecognition = ({
 
   const toggleListening = () => {
     if (!speechRecognition) {
-      alert("Speech recognition is not supported in your browser.");
+      toast.error("Speech recognition is not supported in your browser.");
       return;
     }
 

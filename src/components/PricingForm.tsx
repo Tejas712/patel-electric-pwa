@@ -18,6 +18,7 @@ import { usePricingList, type PricingEntry } from "../hooks/usePricingList";
 import { usePdfGenerator } from "../hooks/usePdfGenerator";
 import { useAiSuggestions } from "../hooks/useAiSuggestions";
 import BillPreview from "./BillPreview";
+import toast from "react-hot-toast";
 
 // Add animation keyframes
 const pulseAnimation = `
@@ -135,22 +136,22 @@ const PricingForm = () => {
   const handleDownloadPDF = async () => {
     const result = await generatePdf("download");
     if (!result.success) {
-      alert(result.error);
+      toast.error(result.error || "Unknown error");
     }
   };
 
   const handleShare = async () => {
     const result = await generatePdf("share");
     if (!result.success) {
-      alert(result.error);
+      toast.error(result.error || "Unknown error");
     }
   };
 
-  const handleSaveOrUpdate = () => {
+  const handleSaveOrUpdate = async () => {
     const result = saveOrUpdatePricing();
     if (result.success) {
-      alert(result.message);
-    navigate("/list");
+      toast.success(result.message || "Success");
+      navigate("/list");
     }
   };
 

@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { FaShare, FaEdit, FaTrash, FaCopy, FaPlus, FaEllipsisV } from "react-icons/fa";
 import type { FieldType } from "../data/field";
 import { v4 as uuidv4 } from "uuid";
+import { useDialog } from "../context/DialogContext";
+import toast from "react-hot-toast";
 
 interface Customer {
   name: string;
@@ -28,6 +30,7 @@ const PricingList = () => {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { confirm } = useDialog();
 
   useEffect(() => {
     const list: PricingEntry[] = JSON.parse(
@@ -49,9 +52,9 @@ const PricingList = () => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  const handleDelete = (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this pricing?"))
-      return;
+  const handleDelete = async (id: string) => {
+    const result = await confirm("Are you sure you want to delete this pricing?", "Delete Confirmation");
+    if (!result) return;
     const newList = pricing.filter((p) => p.id !== id);
     setPricing(newList);
     localStorage.setItem("pricingList", JSON.stringify([...newList].reverse()));
@@ -92,7 +95,7 @@ const PricingList = () => {
     setActiveMenuId(null);
   };
 
-  const handleCopy = (data: PricingEntry) => {
+  const handleCopy = async (data: PricingEntry) => {
     const pricingList: PricingEntry[] = JSON.parse(
       localStorage.getItem("pricingList") || "[]"
     );
@@ -104,7 +107,7 @@ const PricingList = () => {
     pricingList.push(newEntry);
     localStorage.setItem("pricingList", JSON.stringify(pricingList));
     setPricing([newEntry, ...pricing]);
-    alert("Pricing copied!");
+    toast.success("Pricing copied!");
     setActiveMenuId(null);
   };
 
