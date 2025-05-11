@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { priceFields, wiredDetails } from "../data/field";
 import {
   FaShare,
@@ -50,7 +50,9 @@ const PricingForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showAddFieldDialog, setShowAddFieldDialog] = useState(false);
-  const [newFieldType, setNewFieldType] = useState<"wire" | "price" | null>(null);
+  const [newFieldType, setNewFieldType] = useState<"wire" | "price" | null>(
+    null
+  );
   const [newFieldLabel, setNewFieldLabel] = useState("");
   const [newFieldValue, setNewFieldValue] = useState("");
   const [showAiDialog, setShowAiDialog] = useState(false);
@@ -94,11 +96,7 @@ const PricingForm = () => {
   } = useAiSuggestions({ priceFields: priceValues });
 
   // Initialize speech recognition
-  const {
-    isListening,
-    toggleListening,
-    stopListening,
-  } = useSpeechRecognition({
+  const { isListening, toggleListening, stopListening } = useSpeechRecognition({
     onTranscriptChange: setAiPrompt,
   });
 
@@ -133,14 +131,14 @@ const PricingForm = () => {
   };
 
   const handleDownloadPDF = async () => {
-    const result = await generatePdf('download');
+    const result = await generatePdf("download");
     if (!result.success) {
       alert(result.error);
     }
   };
 
   const handleShare = async () => {
-    const result = await generatePdf('share');
+    const result = await generatePdf("share");
     if (!result.success) {
       alert(result.error);
     }
