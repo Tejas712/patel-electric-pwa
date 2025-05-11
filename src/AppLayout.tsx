@@ -1,8 +1,9 @@
 import PricingForm from "./components/PricingForm";
 import PricingList from "./components/PricingList";
+import GeminiChat from "./components/GeminiChat";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import logo from "./assets/logo.png";
-import { FaHome, FaList } from "react-icons/fa";
+import { FaHome, FaList, FaRobot } from "react-icons/fa";
 
 function MobileNav() {
   const location = useLocation();
@@ -26,6 +27,15 @@ function MobileNav() {
         <FaList size={22} />
         Pricings
       </Link>
+      {/* <Link
+        to="/chat"
+        className={`flex flex-col items-center text-xs ${
+          location.pathname === "/chat" ? "text-yellow-400" : "text-white"
+        } hover:text-yellow-400 transition`}
+      >
+        <FaRobot size={22} />
+        AI Chat
+      </Link> */}
     </nav>
   );
 }
@@ -58,12 +68,19 @@ function AppLayout() {
           >
             List
           </Link>
+          {/* <Link
+            to="/chat"
+            className={`font-medium transition px-2 pb-1 ${location.pathname === '/chat' ? 'text-yellow-400 font-bold border-b-2 border-yellow-400' : 'text-white hover:text-yellow-400'}`}
+          >
+            AI Chat
+          </Link> */}
         </div>
       </nav>
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
         <Routes>
           <Route path="/" element={<PricingForm />} />
           <Route path="/list" element={<PricingList />} />
+          <Route path="/chat" element={<GeminiChat />} />
         </Routes>
         <MobileNav />
       </div>

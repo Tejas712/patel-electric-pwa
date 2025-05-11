@@ -2,9 +2,10 @@ import React, { useState, useEffect } from "react";
 import type { FieldType } from "../data/field";
 import { priceFields, wiredDetails } from "../data/field";
 import { billHtml } from "../data/bill";
-import { FaShare, FaDownload, FaPlus, FaTrash } from "react-icons/fa";
+import { FaShare, FaDownload, FaPlus, FaTrash, FaRobot, FaTimes } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
+import { sendMessage } from "../services/gemini";
 
 const initialCustomer = {
   name: "",
@@ -27,6 +28,10 @@ const PricingForm = () => {
   const [wiresValues, setWiresValues] = useState<FieldType[]>(wiredDetails);
   const [priceValues, setPriceValues] = useState<FieldType[]>(priceFields);
   const [editId, setEditId] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [showAiDialog, setShowAiDialog] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiPreview, setAiPreview] = useState<FieldType[] | null>(null);
 
   // Load editPricing if present
   useEffect(() => {
@@ -181,8 +186,108 @@ const PricingForm = () => {
     navigate("/list");
   };
 
+  const handleAiFill = async () => {
+    if (!aiPrompt.trim()) return;
+    
+    setIsAiLoading(true);
+    try {
+      const response = await sendMessage(priceValues, aiPrompt);
+        console.log("check ====>", response);
+      if (response.fields) {
+        setAiPreview(response.fields);
+      }
+    } catch (error) {
+      console.error('Error getting AI suggestions:', error);
+      alert('Failed to get AI suggestions. Please try again.');
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const applyAiSuggestions = () => {
+    if (!aiPreview) return;
+
+    // Update price fields with AI response
+    const updatedPriceFields = priceValues.map(field => {
+      const aiField = aiPreview.find(f => f.label === field.label);
+      if (aiField) {
+        return {
+          ...field,
+          value: aiField.value || 0
+        };
+      }
+      return field;
+    });
+    setPriceValues(updatedPriceFields);
+    setShowAiDialog(false);
+    setAiPrompt("");
+    setAiPreview(null);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-4 px-1 md:py-8 md:px-2 overflow-auto pb-24">
+      {/* AI Dialog */}
+      {showAiDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900">AI Price Suggestions</h3>
+                <button
+                  onClick={() => setShowAiDialog(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <FaTimes size={20} />
+                </button>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Describe your requirements
+                </label>
+                <textarea
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="Example:આ દરજીખાતા મુજબ વિવિધ ઈલેક્ટ્રિકલ કામોની ચાર્જવિહી આપવામાં આવી છે. લાઈટિંગ પોઈન્ટ માટે ભાવ રૂ. 10 છે. મેઈન અને એ.સી. લાઈન (1.5mm) માટે રૂ. 20 નો ખર્ચ આવે છે, જયારે તેનું જ 2.5mm વેરિયન્ટ માટે ભાવ રૂ. 30 છે. ઉપરાંત, પેનલ લાઈટ તથા ફેસી લાઈટ ફિટિંગ ચાર્જ માટે રૂ. 40 નક્કી કરવામાં આવ્યા છે. આ ભાવો વિવિધ ઇલેક્ટ્રિકલ ફિટિંગ્સ અને લાઈટિંગ પોઈન્ટ્સના આધારે ગ્રાહકોને સરળતાથી અંદાજ આપવામાં માટે દર્શાવવામાં આવ્યા છે."
+                  className="w-full rounded-lg px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-400 shadow-sm transition min-h-[100px]"
+                />
+              </div>
+
+              <button
+                onClick={handleAiFill}
+                disabled={isAiLoading || !aiPrompt.trim()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow text-sm transition disabled:opacity-50 mb-4"
+              >
+                <FaRobot className={isAiLoading ? 'animate-spin' : ''} />
+                {isAiLoading ? 'Generating...' : 'Generate Suggestions'}
+              </button>
+
+              {aiPreview && (
+                <div className="mt-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">Preview</h4>
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {aiPreview.map((field) => (
+                      <div key={field.id} className="bg-gray-50 rounded-lg p-3">
+                        <div className="font-medium text-gray-700">{field.label}</div>
+                        <div className="text-gray-600">
+                          {field.value} {field.unit}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={applyAiSuggestions}
+                    className="w-full mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium shadow text-sm transition"
+                  >
+                    Apply Suggestions
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-3xl bg-white/50 backdrop-blur-lg border border-white/30 rounded-2xl md:rounded-3xl shadow-2xl p-3 sm:p-4 md:p-8 md:py-12">
         {/* Customer Details */}
         <div className="mb-10">
@@ -217,7 +322,16 @@ const PricingForm = () => {
 
         {/* Wire Details */}
         <div className="mb-10">
-          <h2 className="text-2xl font-extrabold text-gray-900 mb-5 text-center tracking-tight drop-shadow-lg">વાયર ડીટેલ્સ</h2>
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight drop-shadow-lg">વાયર ડીટેલ્સ</h2>
+            <button
+              onClick={() => setShowAiDialog(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow text-sm transition"
+            >
+              <FaRobot />
+              AI Fill
+            </button>
+          </div>
           <div className="space-y-3">
             {wiresValues.map((field) => (
               <div key={field.id} className="bg-gray-100 rounded-lg p-3 flex flex-col gap-1">
